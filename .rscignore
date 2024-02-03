@@ -1,0 +1,11 @@
+cohorts
+strategusInternals
+results
+PlPModels
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+!app.R
+!config.yml
+!*/drivers

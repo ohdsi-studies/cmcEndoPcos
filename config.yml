@@ -1,0 +1,35 @@
+default:
+  studyName: "ohda_project_template"
+  resultsDatabaseSchema: "ohda_project_template" # the PG schema you will push results to
+  rootFolder: !expr getwd()
+  andromeda: !expr options(andromedaTempFolder = file.path(getwd(), "andromedaTemp"))
+  studySpecificationFileName: "analysisSpecifications.json"
+  keyringName: "ohda"
+  keyringConnectionStringPrefix: "redShiftConnectionStringOhda"
+
+# Comment out values you do not need but do 
+# not add any other key values or change the spacing/formatting
+# in this section. You may reorder them if easier.
+studySettings:
+  cdm:
+    AmbEmr: cdm_iqvia_amb_emr_v2169
+    AustraliaLpd: cdm_ims_australia_lpd_v2353
+    Ccae: cdm_truven_ccae_v2324
+    Cprd: cdm_cprd_v2358
+    FranceDa: cdm_ims_france_v2354
+    GermanyDa: cdm_ims_germany_v2352
+    Jmdc: cdm_jmdc_v2325
+    OptumDod: cdm_optum_extended_dod_v2323
+    OptumEhr: cdm_optum_ehr_v2247
+    OptumSes: cdm_optum_extended_ses_v2327
+    Mdcd: cdm_truven_mdcd_v2359
+    Mdcr: cdm_truven_mdcr_v2322
+    Pharmetrics: cdm_iqvia_pharmetrics_plus_v2286
+    Premier: cdm_premier_v2326
+  cohorts:
+    cohortIds: [2245,9900,2072,11145,8035,8036,12863,12864,11081,4338,13826]
+  cohortDiagnostics:
+    cohortIds: [2245,9900,2072]
+  pheValuator:
+    analysisListFileName: "PheValuatorAnalysisList.json"
+    
