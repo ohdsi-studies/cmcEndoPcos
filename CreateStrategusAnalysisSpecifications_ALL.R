@@ -705,7 +705,7 @@ analysisSpecifications <- Strategus::createEmptyAnalysisSpecificiations() %>%
   # Strategus::addModuleSpecifications(selfControlledModuleSpecifications) %>%
   Strategus::addModuleSpecifications(plpModuleSpecifications)
 
-if (!dir.exists(config$rootFolder)) {
-  dir.create(config$rootFolder, recursive = TRUE)
-}
+# if (!dir.exists(config$rootFolder)) {
+#   dir.create(config$rootFolder, recursive = TRUE)
+# }
 ParallelLogger::saveSettingsToJson(analysisSpecifications,"analysisSpecification.json")
