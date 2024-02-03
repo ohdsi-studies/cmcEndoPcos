@@ -1,3 +1,6 @@
+# mManually enter studyName below for your specific question
+studyName <- "Q1" #keep this short - if it gets too long it will error
+
 # Add a check to make sure that INSTANTIATED_MODULES_FOLDER is set
 if (Sys.getenv("INSTANTIATED_MODULES_FOLDER") == "") {
   stop(
@@ -17,9 +20,9 @@ analysisSpecifications <-
 # Create and save execution settings ----------------------------------------------------
 executionSettings <- Strategus::createCdmExecutionSettings(
   connectionDetailsReference = "my-cdm-connection",
-  workDatabaseSchema = "<enter manually to refer to your scratch space>",
-  cdmDatabaseSchema = "<enter manually to refer to your CDM schema e.g. database.dbo>",
-  cohortTableNames = CohortGenerator::getCohortTableNames("cu_studyathon"),
+  workDatabaseSchema = "<enter manually to refer to your scratch space>", # should database.results
+  cdmDatabaseSchema = "<enter manually to refer to your CDM schema>", # should be database.dbo
+  cohortTableNames = CohortGenerator::getCohortTableNames(studyName),
   workFolder = file.path(getwd(), "strategusWork"),
   resultsFolder = file.path(getwd(), "strategusResults"),
   minCellCount = 5

@@ -1,6 +1,7 @@
 library(dplyr)
 
-webApiUrl <- "<manually enter webApiUrl>"
+#webApiUrl <- "<manually enter webApiUrl from the Columbia Atlas configuration page>"
+webApiUrl <-"https://discovery.dbmi.columbia.edu/WebAPI/dev"
 # webApiUrl <- Sys.getenv("baseUrl") # this may be useful if you keep the webApiUrl stored in your Renviron
 
 ########################################################
@@ -36,7 +37,7 @@ outcomes <- tibble(
   cohortId = c(2072), # Acute MI
   cleanWindow = c(365)
 )
-negativeConceptSetId <- 257
+negativeConceptSetId <- 2
 timeAtRisks <- tibble(
   label = c("On treatment", "fixed 365d"),
   riskWindowStart  = c(1, 1),
@@ -75,9 +76,25 @@ psMatchMaxRatio <- 1 # If bigger than 1, the outcome model will be conditioned o
 
 # Shared Resources -------------------------------------------------------------
 source("https://raw.githubusercontent.com/OHDSI/CohortGeneratorModule/v0.3.0/SettingsFunctions.R")
+
+# If you are from J&J you should run this line
+
 ROhdsiWebApi::authorizeWebApi(
   baseUrl = webApiUrl,
   authMethod = "windows")
+
+# If you are from Columbia you should use the lines below to enter your credentials,
+# then remove those lines (to keep credentials private)
+# Sys.setenv(username="") #your UNI
+# Sys.setenv(password="") #your password for Atlas
+
+ROhdsiWebApi::authorizeWebApi(
+  baseUrl = webApiUrl,
+  webApiPassword = Sys.getenv("password"),
+  webApiUsername = Sys.getenv("username"),
+  authMethod = "ad"
+)
+
 cohortDefinitionSet <- ROhdsiWebApi::exportCohortDefinitionSet(
   cohortIds =  unique(
     c(
