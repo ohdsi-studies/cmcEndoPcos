@@ -1,5 +1,5 @@
 # mManually enter studyName below for your specific question
-studyName <- "Q1" #keep this short - if it gets too long it will error
+studyName <- "pcosQ" #keep this short - if it gets too long it will error
 
 # Add a check to make sure that INSTANTIATED_MODULES_FOLDER is set
 if (Sys.getenv("INSTANTIATED_MODULES_FOLDER") == "") {
