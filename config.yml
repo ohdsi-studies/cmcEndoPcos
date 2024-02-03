@@ -1,6 +1,6 @@
 default:
-  studyName: "ohda_project_template"
-  resultsDatabaseSchema: "ohda_project_template" # the PG schema you will push results to
+  studyName: "cmcEndoPcos"
+  resultsDatabaseSchema: "cmcEndoPcos" # the PG schema you will push results to
   rootFolder: !expr getwd()
   andromeda: !expr options(andromedaTempFolder = file.path(getwd(), "andromedaTemp"))
   studySpecificationFileName: "analysisSpecifications.json"
