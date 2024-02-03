@@ -3,7 +3,7 @@ default:
   resultsDatabaseSchema: "cmcEndoPcos" # the PG schema you will push results to
   rootFolder: !expr getwd()
   andromeda: !expr options(andromedaTempFolder = file.path(getwd(), "andromedaTemp"))
-  studySpecificationFileName: "analysisSpecifications.json"
+  studySpecificationFileName: "analysisSpecification.json"
   keyringName: "ohda"
   keyringConnectionStringPrefix: "redShiftConnectionStringOhda"
 
