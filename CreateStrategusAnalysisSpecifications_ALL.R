@@ -79,9 +79,9 @@ source("https://raw.githubusercontent.com/OHDSI/CohortGeneratorModule/v0.3.0/Set
 
 # If you are from J&J you should run this line
 
-ROhdsiWebApi::authorizeWebApi(
-  baseUrl = webApiUrl,
-  authMethod = "windows")
+# ROhdsiWebApi::authorizeWebApi(
+#   baseUrl = webApiUrl,
+#   authMethod = "windows")
 
 # If you are from Columbia you should use the lines below to enter your credentials,
 # then remove those lines (to keep credentials private)
