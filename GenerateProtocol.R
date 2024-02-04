@@ -21,3 +21,12 @@ ProtocolGenerator::generateProtocol(
   outputLocation = file.path(rootFolder, 'protocol'), 
   outputName = 'analysisProtocolPcosIncidence.html'
 )
+
+# Generating the protocol for the PCOS Prediction Question
+
+ProtocolGenerator::generateProtocol(
+  jsonLocation = file.path(rootFolder, "analysisSpecificationPcosPrediction.json"), 
+  webAPI = "https://api.ohdsi.org/WebAPI", 
+  outputLocation = file.path(rootFolder, 'protocol'), 
+  outputName = 'analysisProtocolPcosPrediction.html'
+)
