@@ -10,8 +10,6 @@
 #   * launch the app viewer for your results
 #
 
-# Manually enter the 
-
 library(dplyr)
 library(ShinyAppBuilder)
 
@@ -21,109 +19,142 @@ isModuleComplete <- function(moduleFolder) {
   return(doneFileFound || isDatabaseMetaDataFolder)
 }
 
-# TODO: need to consolidate these next two definitions
-studyResultsFolder <- "D:/Documents/Feb2024StudyAThon/cmcEndoPcosPrediction/results/Ccae/strategusResults"
-
-resultsDatabaseSchema <- "main"
-
-databases <- list(
-  list(
-    databaseId = "ccae",
-    strategusResultsFolder = studyResultsFolder,
-    resultsSchema = resultsDatabaseSchema
-  )
-)
-
-releaseKey <- format(Sys.time(), "%Y%m%d_%H%M")
-
-resultsDatabaseConnectionDetails <- DatabaseConnector::createConnectionDetails(
-  dbms = "sqlite",
-  server = file.path(studyResultsFolder, paste0("results_", releaseKey, ".sqlite"))
-)
-
-connection <- DatabaseConnector::connect(connectionDetails = resultsDatabaseConnectionDetails)
-
-moduleFolders <- list.dirs(path = studyResultsFolder, recursive = FALSE)
-
-# discover module configuration
-useAppModulePatientLevelPrediction <- FALSE
-useAppModuleCohortDiagnostics <- FALSE
-useAppModuleCharacterization <- FALSE
-useAppModuleCohortGenerator <- FALSE
-useAppModuleCohortIncidence <- FALSE
-useAppModuleCohortMethod <- FALSE
-
-for (moduleFolder in moduleFolders) {
-  moduleName <- basename(moduleFolder)
-  if (startsWith(moduleName,"PatientLevelPrediction")) {
-    useAppModulePatientLevelPrediction <- TRUE
+getInferredShinyAppConfig <- function(strategusResultsFolder) {
+  moduleFolders <- list.dirs(path = strategusResultsFolder, recursive = FALSE)
+  
+  # discover module configuration
+  useAppModulePatientLevelPrediction <- FALSE
+  useAppModuleCohortDiagnostics <- FALSE
+  useAppModuleCharacterization <- FALSE
+  useAppModuleCohortGenerator <- FALSE
+  useAppModuleCohortIncidence <- FALSE
+  useAppModuleCohortMethod <- FALSE  
+  
+  for (moduleFolder in moduleFolders) {
+    moduleName <- basename(moduleFolder)
+    if (startsWith(moduleName,"PatientLevelPrediction")) {
+      useAppModulePatientLevelPrediction <- TRUE
+    }
+    if (startsWith(moduleName,"Characterization")) {
+      useAppModuleCharacterization <- TRUE
+    }
+    if (startsWith(moduleName,"CohortGenerator")) {
+      useAppModuleCohortGenerator <- TRUE
+    }
+    if (startsWith(moduleName, "CohortIncidence")) {
+      useAppModuleCohortIncidence <- TRUE
+    }
   }
-  if (startsWith(moduleName,"Characterization")) {
-    useAppModuleCharacterization <- TRUE
+  
+  # configure and launch shiny app
+  config <- initializeModuleConfig() %>%
+    addModuleConfig(createDefaultAboutConfig()) %>%
+    addModuleConfig(createDefaultDatasourcesConfig())
+  
+  if (useAppModuleCohortGenerator) {
+    config <- config %>%
+      addModuleConfig(createDefaultCohortGeneratorConfig())
   }
-  if (startsWith(moduleName,"CohortGenerator")) {
-    useAppModuleCohortGenerator <- TRUE
+  
+  if (useAppModuleCharacterization) {
+    config <- config %>%
+      addModuleConfig(createDefaultCharacterizationConfig()) 
   }
-  if (startsWith(moduleName, "CohortIncidence")) {
-    useAppModuleCohortIncidence <- TRUE
+  
+  if (useAppModuleCohortDiagnostics) {
+    config <- config %>%
+      addModuleConfig(createDefaultCohortDiagnosticsConfig()) 
   }
+  
+  if (useAppModuleCohortMethod) {
+    config <- config %>%
+      addModuleConfig(createDefaultCohortMethodConfig()) 
+  }
+  
+  if (useAppModulePatientLevelPrediction) {
+    config <- config %>%
+      addModuleConfig(createDefaultPredictionConfig())
+  }
+  
+  return(config)
 }
 
-for (moduleFolder in moduleFolders) {
-  moduleName <- basename(moduleFolder)
-  if (!isModuleComplete(moduleFolder)) {
-    warning("Module ", moduleName, " did not complete. Skipping table creation")
-  } else {
-    if (startsWith(moduleName, "PatientLevelPrediction")) {
-      message("- Creating PatientLevelPrediction tables")
-      dbSchemaSettings <- PatientLevelPrediction::createDatabaseSchemaSettings(
-        resultSchema = resultsDatabaseSchema,
-        tablePrefix = "plp",
-        targetDialect = DatabaseConnector::dbms(connection)
-      )
-      PatientLevelPrediction::createPlpResultTables(
-        connectionDetails = resultsDatabaseConnectionDetails,
-        targetDialect = dbSchemaSettings$targetDialect,
-        resultSchema = dbSchemaSettings$resultSchema,
-        deleteTables = TRUE,
-        createTables = TRUE,
-        tablePrefix = dbSchemaSettings$tablePrefix
-      )
-    } else if (startsWith(moduleName, "CohortDiagnostics")) {
-      message("- Creating CohortDiagnostics tables")
-      CohortDiagnostics::createResultsDataModel(
-        connectionDetails = resultsDatabaseConnectionDetails,
-        databaseSchema = resultsDatabaseSchema,
-        tablePrefix = "cd_"
-      )
-      CohortDiagnostics::migrateDataModel(
-        connectionDetails = resultsDatabaseConnectionDetails,
-        databaseSchema = resultsDatabaseSchema,
-        tablePrefix = "cd_"
-      )
+# create the sqlite database file and initialize the necessary tables
+# limitation: if you prepare on a result folder for a database that doesn't have all modules
+#   that other databases have then the proper tables would not be created
+# to improve on this, prepare the database after inspecting all subfolders and collecting
+#   boolean flags for which preparation steps should be employed such as the infer function
+prepareSqliteDatabase <- function(strategusResultsFolder, resultsDatabaseSchema = "main") {
+  releaseKey <- format(Sys.time(), "%Y%m%d_%H%M")
+  databaseFileName <- file.path(strategusResultsFolder, paste0("results_", releaseKey, ".sqlite"))
+  resultsDatabaseConnectionDetails <- DatabaseConnector::createConnectionDetails(
+    dbms = "sqlite",
+    server = databaseFileName
+  )
+  connection <- DatabaseConnector::connect(
+    connectionDetails = resultsDatabaseConnectionDetails
+  )
+  moduleFolders <- list.dirs(path = strategusResultsFolder, recursive = FALSE)
+  for (moduleFolder in moduleFolders) {
+    moduleName <- basename(moduleFolder)
+    if (!isModuleComplete(moduleFolder)) {
+      warning("Module ", moduleName, " did not complete. Skipping table creation")
     } else {
-      message("- Creating results for module ", moduleName)
-      rdmsFile <- file.path(moduleFolder, "resultsDataModelSpecification.csv")
-      if (!file.exists(rdmsFile)) {
-        stop("resultsDataModelSpecification.csv not found in ", resumoduleFolderltsFolder)
-      } else {
-        specification <- CohortGenerator::readCsv(file = rdmsFile)
-        sql <- ResultModelManager::generateSqlSchema(csvFilepath = rdmsFile)
-        sql <- SqlRender::render(
-          sql = sql,
-          database_schema = resultsDatabaseSchema
+      if (startsWith(moduleName, "PatientLevelPrediction")) {
+        message("- Creating PatientLevelPrediction tables")
+        dbSchemaSettings <- PatientLevelPrediction::createDatabaseSchemaSettings(
+          resultSchema = resultsDatabaseSchema,
+          tablePrefix = "plp",
+          targetDialect = DatabaseConnector::dbms(connection)
         )
-        DatabaseConnector::executeSql(connection = connection, sql = sql)
+        PatientLevelPrediction::createPlpResultTables(
+          connectionDetails = resultsDatabaseConnectionDetails,
+          targetDialect = dbSchemaSettings$targetDialect,
+          resultSchema = dbSchemaSettings$resultSchema,
+          deleteTables = TRUE,
+          createTables = TRUE,
+          tablePrefix = dbSchemaSettings$tablePrefix
+        )
+      } else if (startsWith(moduleName, "CohortDiagnostics")) {
+        message("- Creating CohortDiagnostics tables")
+        CohortDiagnostics::createResultsDataModel(
+          connectionDetails = resultsDatabaseConnectionDetails,
+          databaseSchema = resultsDatabaseSchema,
+          tablePrefix = "cd_"
+        )
+        CohortDiagnostics::migrateDataModel(
+          connectionDetails = resultsDatabaseConnectionDetails,
+          databaseSchema = resultsDatabaseSchema,
+          tablePrefix = "cd_"
+        )
+      } else {
+        message("- Creating results for module ", moduleName)
+        rdmsFile <- file.path(moduleFolder, "resultsDataModelSpecification.csv")
+        if (!file.exists(rdmsFile)) {
+          stop("resultsDataModelSpecification.csv not found in ", resumoduleFolderltsFolder)
+        } else {
+          specification <- CohortGenerator::readCsv(file = rdmsFile)
+          sql <- ResultModelManager::generateSqlSchema(csvFilepath = rdmsFile)
+          sql <- SqlRender::render(
+            sql = sql,
+            database_schema = resultsDatabaseSchema
+          )
+          DatabaseConnector::executeSql(connection = connection, sql = sql)
+        }
       }
     }
   }
+  DatabaseConnector::disconnect(connection)
+  message("created database file ", databaseFileName)
+  return(resultsDatabaseConnectionDetails)
 }
 
-# perform module specific tasks for each database
-for (i in seq_along(databases)) {
-  database <- databases[[i]]
-  message("Loading results for: ", database$databaseId, " in ", database$strategusResultsFolder)
-  moduleFolders <- list.dirs(path = database$strategusResultsFolder, recursive = FALSE)
+loadSqliteDatabase <- function(databaseId, strategusResultsFolder, resultsDatabaseConnectionDetails, resultsDatabaseSchema="main") {
+  message("Loading results for: ", databaseId, " in ", strategusResultsFolder)
+  moduleFolders <- list.dirs(path = strategusResultsFolder, recursive = FALSE)
+  
+  connection <- DatabaseConnector::connect(resultsDatabaseConnectionDetails)
+  
   for (moduleFolder in moduleFolders) {
     moduleName <- basename(moduleFolder)
     if (!isModuleComplete(moduleFolder)) {
@@ -135,9 +166,9 @@ for (i in seq_along(databases)) {
           tablePrefix = "plp",
           targetDialect = DatabaseConnector::dbms(connection)
         )
-        message("Loading PLP results for: ", database$databaseId, " in ", database$strategusResultsFolder)
+        message("Loading PLP results for: ", databaseId, " in ", strategusResultsFolder)
         modulePath <- list.files(
-          path = database$strategusResultsFolder, 
+          path = strategusResultsFolder, 
           pattern = "PatientLevelPredictionModule",
           full.names = TRUE,
           include.dirs = TRUE
@@ -168,7 +199,7 @@ for (i in seq_along(databases)) {
             resultsFolder = moduleFolder,
             purgeSiteDataBeforeUploading = TRUE,
             databaseIdentifierFile = file.path(
-              database$strategusResultsFolder,
+              strategusResultsFolder,
               "DatabaseMetaData/database_meta_data.csv"
             ),
             runCheckAndFixCommands = runCheckAndFixCommands,
@@ -178,44 +209,28 @@ for (i in seq_along(databases)) {
       }
     }
   }
+  DatabaseConnector::disconnect(connection)
 }
 
-DatabaseConnector::disconnect(connection)
+# study specific code
+strategusResultsFolder <- "D:/projects/CUStudyathon/results/Ccae/strategusResults"
 
-# configure and launch shiny app
-config <- initializeModuleConfig() %>%
-  addModuleConfig(createDefaultAboutConfig()) %>%
-  addModuleConfig(createDefaultDatasourcesConfig())
+appConfig <- getInferredShinyAppConfig(strategusResultsFolder)
 
-if (useAppModuleCohortGenerator) {
-  config <- config %>%
-    addModuleConfig(createDefaultCohortGeneratorConfig())
-}
+resultsDatabaseConnectionDetails <- prepareSqliteDatabase(
+  strategusResultsFolder = strategusResultsFolder
+)
 
-if (useAppModuleCharacterization) {
-  config <- config %>%
-    addModuleConfig(createDefaultCharacterizationConfig()) 
-}
+loadSqliteDatabase(
+  databaseId = "ccae",
+  strategusResultsFolder = strategusResultsFolder, 
+  resultsDatabaseConnectionDetails
+)
 
-if (useAppModuleCohortDiagnostics) {
-  config <- config %>%
-    addModuleConfig(createDefaultCohortDiagnosticsConfig()) 
-}
-
-if (useAppModuleCohortMethod) {
-  config <- config %>%
-    addModuleConfig(createDefaultCohortMethodConfig()) 
-}
-
-if (useAppModulePatientLevelPrediction) {
-  config <- config %>%
-    addModuleConfig(createDefaultPredictionConfig())
-}
-
-connection <- ResultModelManager::ConnectionHandler$new(resultsDatabaseConnectionDetails)
+resultsConnection <- ResultModelManager::ConnectionHandler$new(resultsDatabaseConnectionDetails)
 
 ShinyAppBuilder::viewShiny(
-  config = config, 
-  connection = connection
+  config = appConfig, 
+  connection = resultsConnection
 )
 
