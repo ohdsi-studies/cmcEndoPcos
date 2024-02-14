@@ -4,30 +4,17 @@
 #Sys.setenv("DATABASE_CONNECTOR_BULK_UPLOAD" = TRUE)
 #Sys.setenv("POSTGRES_PATH" = "D:/Program Files/PostgreSQL/13/bin")
 
-# manually enter the results schema on the OHDSI PG server that you would like to upload your results to
-# Note this should be the same as the resultsDatabaseSchema that you specified in the StrategusResultsTableCreation.R program
-resultsDatabaseSchema <- "<manually enter resultsDatabaseSchema name e.g. cmcPcosPred>"
-
-# Note this should be the same as the resultsDatabaseConnectionDetails that you specified in the StrategusResultsTableCreation.R program
-resultsDatabaseConnectionDetails <- DatabaseConnector::createConnectionDetails(
-  dbms = "sqlite",
-  connectionString = ""
-  # user = ,
-  # password =
-)
-
 library(dplyr)
-
-rootFolder <- getwd()
+source("LoadConfiguration.R")
 
 # Setup logging ----------------------------------------------------------------
 ParallelLogger::clearLoggers()
 ParallelLogger::addDefaultFileLogger(
-  fileName = file.path(rootFolder, "upload-log.txt"),
+  fileName = file.path(config$rootFolder, "upload-log.txt"),
   name = "RESULTS_FILE_LOGGER"
 )
 ParallelLogger::addDefaultErrorReportLogger(
-  fileName = file.path(rootFolder, 'upload-errorReport.txt'),
+  fileName = file.path(config$rootFolder, 'upload-errorReport.txt'),
   name = "RESULTS_ERROR_LOGGER"
 )
 
@@ -51,7 +38,7 @@ for (i in seq_along(databases)) {
     } else {
       if (startsWith(moduleName, "PatientLevelPrediction")) {
         dbSchemaSettings <- PatientLevelPrediction::createDatabaseSchemaSettings(
-          resultSchema = resultsDatabaseSchema,
+          resultSchema = config$resultsDatabaseSchema,
           tablePrefix = "plp",
           targetDialect = DatabaseConnector::dbms(connection)
         )
@@ -70,7 +57,7 @@ for (i in seq_along(databases)) {
             csvFolder = modulePath,
             connectionDetails = resultsDatabaseConnectionDetails,
             databaseSchemaSettings = dbSchemaSettings,
-            modelSaveLocation = file.path(rootFolder, "PlPModels"),
+            modelSaveLocation = file.path(config$rootFolder, "PlPModels"),
             csvTableAppend = ""
           )
         }        
@@ -84,7 +71,7 @@ for (i in seq_along(databases)) {
           runCheckAndFixCommands = grepl("CohortDiagnostics", moduleName)
           ResultModelManager::uploadResults(
             connection = connection,
-            schema = resultsDatabaseSchema,
+            schema = config$resultsDatabaseSchema,
             resultsFolder = moduleFolder,
             purgeSiteDataBeforeUploading = TRUE,
             databaseIdentifierFile = file.path(

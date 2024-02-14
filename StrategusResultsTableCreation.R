@@ -1,29 +1,15 @@
-# manually enter the results schema on the OHDSI PG server that you would like to create your tables in
-resultsDatabaseSchema <- "<manually enter resultsDatabaseSchema name e.g. cmcPcosPred>"
-
-
-# Create and store connection details for the results database -------------------------------------------------------------
-
-resultsDatabaseConnectionDetails <- DatabaseConnector::createConnectionDetails(
-  dbms = "sqlite",
-  connectionString = ""
-  # user = ,
-  # password =
-)
-
 # Code for creating the result schema and tables in a (Postgres) database
 library(dplyr)
-
-rootFolder <- getwd()
+source("LoadConfiguration.R")
 
 # Setup logging ----------------------------------------------------------------
 ParallelLogger::clearLoggers()
 ParallelLogger::addDefaultFileLogger(
-  fileName = file.path(rootFolder, "results-schema-setup-log.txt"),
+  fileName = file.path(config$rootFolder, "results-schema-setup-log.txt"),
   name = "RESULTS_SCHEMA_SETUP_FILE_LOGGER"
 )
 ParallelLogger::addDefaultErrorReportLogger(
-  fileName = file.path(rootFolder, 'results-schema-setup-errorReport.txt'),
+  fileName = file.path(config$rootFolder, 'results-schema-setup-errorReport.txt'),
   name = "RESULTS_SCHEMA_SETUP_ERROR_LOGGER"
 )
 
@@ -34,7 +20,7 @@ connection <- DatabaseConnector::connect(connectionDetails = resultsDatabaseConn
 tryCatch(
   expr = {
     sql <- "CREATE SCHEMA @schema;"
-    sql <- SqlRender::render(sql = sql, schema = resultsDatabaseSchema)
+    sql <- SqlRender::render(sql = sql, schema = config$resultsDatabaseSchema)
     DatabaseConnector::executeSql(connection = connection, sql = sql)
   }, 
   error = function(e) {
@@ -62,7 +48,7 @@ tryCatch(
       ,
       yes = {
         sql <- "DROP SCHEMA IF EXISTS @schema CASCADE; CREATE SCHEMA @schema;"
-        sql <- SqlRender::render(sql = sql, schema = resultsDatabaseSchema)
+        sql <- SqlRender::render(sql = sql, schema = config$resultsDatabaseSchema)
         DatabaseConnector::executeSql(connection = connection, sql = sql)
       }
     )
@@ -89,7 +75,7 @@ for (moduleFolder in moduleFolders) {
     if (startsWith(moduleName, "PatientLevelPrediction")) {
       message("- Creating PatientLevelPrediction tables")
       dbSchemaSettings <- PatientLevelPrediction::createDatabaseSchemaSettings(
-        resultSchema = resultsDatabaseSchema,
+        resultSchema = config$resultsDatabaseSchema,
         tablePrefix = "plp",
         targetDialect = DatabaseConnector::dbms(connection)
       )
@@ -105,7 +91,7 @@ for (moduleFolder in moduleFolders) {
       message("- Creating CohortDiagnostics tables")
       CohortDiagnostics::createResultsDataModel(
         connectionDetails = resultsDatabaseConnectionDetails,
-        databaseSchema = resultsDatabaseSchema,
+        databaseSchema = config$resultsDatabaseSchema,
         tablePrefix = "cd_"
       )
     } else {
@@ -118,7 +104,7 @@ for (moduleFolder in moduleFolders) {
         sql <- ResultModelManager::generateSqlSchema(csvFilepath = rdmsFile)
         sql <- SqlRender::render(
           sql = sql,
-          database_schema = resultsDatabaseSchema
+          database_schema = config$resultsDatabaseSchema
         )
         DatabaseConnector::executeSql(connection = connection, sql = sql)
       }
